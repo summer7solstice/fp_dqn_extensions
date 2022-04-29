@@ -1,2 +1,2 @@
-# rl_dqn_extensions
-Based on the lib PTAN and DeepMind
+# ProExtraction
+ RL for pong
