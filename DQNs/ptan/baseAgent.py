@@ -63,6 +63,8 @@ class BaseAgentDqn(BaseAgent):
         self.device = device
 
     def __call__(self, states, agent_states=None):
+        if agent_states is None:
+            agent_states = [None] * len(states)
         if self.preprocessor is not None:
             states = self.preprocessor(states)
             if torch.is_tensor(states):
@@ -70,6 +72,4 @@ class BaseAgentDqn(BaseAgent):
         q_values = self.dqn_model(states)
         q = q_values.data.cpu().numpy()
         actions = self.action_selector(q)
-        if agent_states is None:
-            agent_states = [None] * len(states)
         return actions, agent_states
