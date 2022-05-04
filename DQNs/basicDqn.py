@@ -38,6 +38,8 @@ if __name__ == "__main__":
 
     # create the NN (double nets)
     device = torch.device("cuda" if args.cuda else "cpu")
+    # print(env.action_space.n)
+    # print(env.unwrapped.get_action_meanings())
     net = models.BasicDQNModel(env.observation_space.shape, env.action_space.n).to(device)
 
     target_net = baseAgent.TargetNet(net)
@@ -61,7 +63,7 @@ if __name__ == "__main__":
 
     # scheduler for learning rate decay(gamma is the decay rate), could be used in th future
     # see https://pytorch.org/docs/stable/optim.html
-    sched = scheduler.StepLR(opt, step_size=1, gamma=0.1, verbose=True)
+    sched = scheduler.StepLR(opt, step_size=1, gamma=0.1)
 
     def process_batch(engine, batch):
         opt.zero_grad()
@@ -69,6 +71,7 @@ if __name__ == "__main__":
             batch, net, target_net.target_model,
             gamma=game_parameters.gamma, device=device)
         loss_value.backward()
+        print("LOSS of %s = %lf" % (METHOD_NAME, loss_value.item()))
         opt.step()
         epsilon_reducer.reduce_by_frames(engine.state.iteration)
         if engine.state.iteration % game_parameters.targetNet_sync_rate == 0:

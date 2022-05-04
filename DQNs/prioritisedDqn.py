@@ -95,6 +95,7 @@ if __name__ == "__main__":
             batch, batch_weights, net, target_net.target_model,
             gamma=game_parameters.gamma, device=device)
         loss_value.backward()
+        print("LOSS of %s = %lf" % (METHOD_NAME, loss_value.item()))
         opt.step()
         replay_buffer.update_priorities(batch_indices, priorities)
         epsilon_reducer.reduce_by_frames(engine.state.iteration)

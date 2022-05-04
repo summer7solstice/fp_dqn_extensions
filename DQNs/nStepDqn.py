@@ -75,6 +75,7 @@ if __name__ == "__main__":
             batch, net, target_net.target_model,
             gamma=game_parameters.gamma**N_STEPS, device=device)
         loss_value.backward()
+        print("LOSS of %s = %lf" % (METHOD_NAME, loss_value.item()))
         opt.step()
         epsilon_reducer.reduce_by_frames(engine.state.iteration)
         if engine.state.iteration % game_parameters.targetNet_sync_rate == 0:

@@ -11,7 +11,7 @@ GAME_PARAMETERS = {
     'pong' : SimpleNamespace(**
         {
             'environment_name':     "PongNoFrameskip-v4",
-            'goal_reward':          19.0,
+            'goal_reward':          18.0,
             'game_name':            'pong',
             'replay_size':          10**5,
             'replay_start':         10**4,
