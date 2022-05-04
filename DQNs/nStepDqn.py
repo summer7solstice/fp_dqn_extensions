@@ -75,7 +75,6 @@ if __name__ == "__main__":
             batch, net, target_net.target_model,
             gamma=game_parameters.gamma**N_STEPS, device=device)
         loss_value.backward()
-        print("LOSS of %s = %lf" % (METHOD_NAME, loss_value.item()))
         opt.step()
         epsilon_reducer.reduce_by_frames(engine.state.iteration)
         if engine.state.iteration % game_parameters.targetNet_sync_rate == 0:
@@ -86,8 +85,7 @@ if __name__ == "__main__":
             "epsilon": epsilon_reducer.action_selector.epsilon,
         }
 
-    # And, finally, we create the Ignite Engine object, configure it using a function from
-    # common.py, and run our training process.
+    # finally, we create the Ignite Engine object
     # engine = Engine(process_batch)
     # utils.setup_ignite(engine, game_parameters, experience_source, METHOD_NAME, epsilon_reducer)
     # engine.run(utils.create_batch(replay_buffer))
@@ -98,10 +96,12 @@ if __name__ == "__main__":
 
     @engine.on(ptan_ignite.EpisodeEvents.EPISODE_COMPLETED)
     def episode_completed(trainer: Engine):
-        print("Episode %d: reward=%s, steps=%s, speed=%.3f frames/s, elapsed=%s" % (
+        print("Episode %d: reward=%s, steps=%s, speed=%.3f frames/s, elapsed=%s, loss=%lf" % (
             trainer.state.episode, trainer.state.episode_reward,
             trainer.state.episode_steps, trainer.state.metrics.get('fps', 0),
-            timedelta(seconds=trainer.state.metrics.get('time_passed', 0))))
+            timedelta(seconds=trainer.state.metrics.get('time_passed', 0)),
+            trainer.state.output["loss"]
+        ))
         # if trainer.state.episode % 2 == 0:
         #     sched.step()
         #     print("LR decrease to", sched.get_last_lr()[0])
