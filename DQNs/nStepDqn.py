@@ -17,7 +17,7 @@ from datetime import timedelta, datetime
 from ignite.metrics import RunningAverage
 from ignite.contrib.handlers import tensorboard_logger as tb_logger
 import torch.optim.lr_scheduler as scheduler
-
+import warnings
 METHOD_NAME = "n_step_dqn"
 N_STEPS = 4
 
@@ -26,6 +26,8 @@ N_STEPS = 4
 # Pass the correct gamma(𝛾**n) to the calc_loss_dqn function.
 
 if __name__ == "__main__":
+    # get rid of missing metrics warning
+    warnings.simplefilter("ignore", category=UserWarning)
     result_list = []
     random.seed(utils.RANDOM_SEED)
     torch.manual_seed(utils.RANDOM_SEED)

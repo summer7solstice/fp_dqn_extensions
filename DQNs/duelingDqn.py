@@ -16,12 +16,14 @@ from datetime import timedelta, datetime
 from ignite.metrics import RunningAverage
 from ignite.contrib.handlers import tensorboard_logger as tb_logger
 import torch.optim.lr_scheduler as scheduler
-
+import warnings
 METHOD_NAME = "dueling_dqn"
 BUFFER_EVALUATE_SIZE = 1000
 EVALUATE_FRE_BY_FRAME = 100
 
 if __name__ == "__main__":
+    # get rid of missing metrics warning
+    warnings.simplefilter("ignore", category=UserWarning)
     random.seed(utils.RANDOM_SEED)
     torch.manual_seed(utils.RANDOM_SEED)
     parser = argparse.ArgumentParser()

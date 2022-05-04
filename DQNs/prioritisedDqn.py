@@ -18,7 +18,7 @@ from datetime import timedelta, datetime
 from ignite.metrics import RunningAverage
 from ignite.contrib.handlers import tensorboard_logger as tb_logger
 import torch.optim.lr_scheduler as scheduler
-
+import warnings
 METHOD_NAME = "prioritised_dqn"
 REPLAY_ALPHA = 0.6
 BETA_START = 0.4
@@ -31,6 +31,9 @@ class BetaClass:
 
 
 if __name__ == "__main__":
+    # get rid of missing metrics warning
+    warnings.simplefilter("ignore", category=UserWarning)
+
     betaClass = BetaClass(BETA_START)
     result_list = []
     random.seed(utils.RANDOM_SEED)
