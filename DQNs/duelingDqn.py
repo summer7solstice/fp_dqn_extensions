@@ -6,9 +6,8 @@ import torch
 import torch.optim as optim
 from ignite.engine import Engine
 import numpy as np
-import utils
-import models
-from ptan import baseAgent
+import common
+import model_dueling
 import ptan.ignite as ptan_ignite
 import lossCalculator
 from epsilonReducer import EpsilonReducer
@@ -20,33 +19,42 @@ METHOD_NAME = "dueling_dqn"
 BUFFER_EVALUATE_SIZE = 1000
 EVALUATE_FRE_BY_FRAME = 100
 
+
+@torch.no_grad()
+def evaluate_states(states, net, device, engine):
+    s_v = torch.tensor(states).to(device)
+    adv, val = net.adv_val(s_v)
+    engine.state.metrics['adv'] = adv.mean().item()
+    engine.state.metrics['val'] = val.mean().item()
+
 if __name__ == "__main__":
     # get rid of missing metrics warning
     warnings.simplefilter("ignore", category=UserWarning)
-    random.seed(utils.RANDOM_SEED)
-    torch.manual_seed(utils.RANDOM_SEED)
+    random.seed(common.SEED)
+    torch.manual_seed(common.SEED)
     parser = argparse.ArgumentParser()
     parser.add_argument("--cuda", default=False, action="store_true", help="Enable cuda")
     args = parser.parse_args()
 
-    game_parameters = utils.PARA_SHORTCUT
+    game_parameters = common.HYPERPARAMS["pong"]
     # create the environment and apply a set of standard wrappers
     # render_mode = "human" would show the game screen
-    env = gym.make(game_parameters.environment_name)
+    env = gym.make(game_parameters.env_name)
     env = ptan.common.wrappers.wrap_dqn(env)
-    env.seed(utils.RANDOM_SEED)
+    env.seed(common.SEED)
 
     # create the NN (double nets)
     device = torch.device("cuda" if args.cuda else "cpu")
-    net = models.DuelingDQNModel(env.observation_space.shape, env.action_space.n).to(device)
+    net = model_dueling.DuelingDQN(env.observation_space.shape, env.action_space.n).to(device)
 
-    target_net = baseAgent.TargetNet(net)
+    target_net = ptan.agent.TargetNet(net)
 
     # we create the agent, using an epsilon-greedy action selector as default.
     # During the training, epsilon will be decreased by the EpsilonReducer
     # This will decrease the amount of randomly selected actions and give more control to our NN
-    epsilon_reducer = EpsilonReducer()
-    agent = baseAgent.BaseAgentDqn(net, device=device, action_selector=epsilon_reducer.action_selector)
+    action_selector = ptan.actions.EpsilonGreedyActionSelector(epsilon=game_parameters.epsilon_start)
+    epsilon_reducer = EpsilonReducer(selector=action_selector, params=game_parameters)
+    agent = ptan.agent.DQNAgent(net, device=device, action_selector=action_selector)
 
     # The next two very important objects are ExperienceSource and ExperienceReplayBuffer.
     # The first one takes the agent and environment and provides transitions over game episodes.
@@ -57,7 +65,7 @@ if __name__ == "__main__":
     # Then we create an optimizer and define the processing function,
     # which will be called for every batch of transitions to train the model.
     # To do this, we call function loss_func of utils and then backpropagate on the result.
-    opt = optim.Adam(net.parameters(), lr=game_parameters.lr)
+    opt = optim.Adam(net.parameters(), lr=game_parameters.learning_rate)
 
     # scheduler for learning rate decay(gamma is the decay rate), could be used in th future
     # see https://pytorch.org/docs/stable/optim.html
@@ -71,7 +79,7 @@ if __name__ == "__main__":
         loss_value.backward()
         opt.step()
         epsilon_reducer.reduce_by_frames(engine.state.iteration)
-        if engine.state.iteration % game_parameters.targetNet_sync_rate == 0:
+        if engine.state.iteration % game_parameters.target_net_sync == 0:
             # sync the net
             target_net.sync()
         if engine.state.iteration % EVALUATE_FRE_BY_FRAME == 0:
@@ -81,10 +89,10 @@ if __name__ == "__main__":
                 eval_states = [np.array(transition.state, copy=False) for transition in eval_states]
                 eval_states = np.array(eval_states, copy=False)
                 engine.state.eval_states = eval_states
-            utils.evaluate_states(eval_states, net, device, engine)
+            evaluate_states(eval_states, net, device, engine)
         return {
             "loss": loss_value.item(),
-            "epsilon": epsilon_reducer.action_selector.epsilon,
+            "epsilon": action_selector.epsilon,
         }
 
     # finally, we create the Ignite Engine object
@@ -92,7 +100,7 @@ if __name__ == "__main__":
     # utils.setup_ignite(engine, game_parameters, experience_source, METHOD_NAME, epsilon_reducer)
     # engine.run(utils.create_batch(replay_buffer))
     engine = Engine(process_batch)
-    ptan_ignite.EndOfEpisodeHandler(experience_source, bound_avg_reward=game_parameters.goal_reward).attach(engine)
+    ptan_ignite.EndOfEpisodeHandler(experience_source, bound_avg_reward=game_parameters.stop_reward).attach(engine)
     ptan_ignite.EpisodeFPSHandler().attach(engine)
 
 
@@ -119,7 +127,7 @@ if __name__ == "__main__":
 
 
     # track TensorBoard data
-    logdir = f"runs/{datetime.now().isoformat(timespec='minutes')}-{game_parameters.game_name}-{METHOD_NAME}={METHOD_NAME}"
+    logdir = f"runs/{datetime.now().isoformat(timespec='minutes')}-{game_parameters.run_name}-{METHOD_NAME}={METHOD_NAME}"
     tb = tb_logger.TensorboardLogger(log_dir=logdir)
     RunningAverage(output_transform=lambda v: v['loss']).attach(engine, "avg_loss")
 
@@ -135,6 +143,6 @@ if __name__ == "__main__":
                                       output_transform=lambda a: a)
     tb.attach(engine, log_handler=handler, event_name=ptan_ignite.PeriodEvents.ITERS_100_COMPLETED)
 
-    engine.run(utils.create_batch(replay_buffer))
-
+    engine.run(common.batch_generator(replay_buffer, game_parameters.replay_initial,
+                                      game_parameters.batch_size))
 

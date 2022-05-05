@@ -9,7 +9,7 @@ from ignite.engine import Engine
 
 # import utils
 import common
-import dqn_model
+import model_dqn
 # import models
 # from ptan import baseAgent
 # from ptan import agent
@@ -46,7 +46,7 @@ if __name__ == "__main__":
     device = torch.device("cuda" if args.cuda else "cpu")
     # print(env.action_space.n)
     # print(env.unwrapped.get_action_meanings())
-    net = dqn_model.DQN(env.observation_space.shape, env.action_space.n).to(device)
+    net = model_dqn.DQN(env.observation_space.shape, env.action_space.n).to(device)
 
     target_net = ptan.agent.TargetNet(net)
 

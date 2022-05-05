@@ -8,9 +8,10 @@ import torch
 import torch.optim as optim
 from ignite.engine import Engine
 
-import utils
-import models
-from ptan import baseAgent
+# import utils
+import common
+import model_dueling
+# from ptan import baseAgent
 import ptan.ignite as ptan_ignite
 import lossCalculator
 from epsilonReducer import EpsilonReducer
@@ -32,40 +33,49 @@ class BetaClass:
     def __init__(self, beta):
         self.beta = beta
 
+# more evaluation controlled by proper frequency
+@torch.no_grad()
+def evaluate_states(states, net, device, engine):
+    s_v = torch.tensor(states).to(device)
+    adv, val = net.adv_val(s_v)
+    engine.state.metrics['adv'] = adv.mean().item()
+    engine.state.metrics['val'] = val.mean().item()
+
+
 if __name__ == "__main__":
     # get rid of missing metrics warning
     warnings.simplefilter("ignore", category=UserWarning)
     betaClass = BetaClass(BETA_START)
     result_list = []
-    random.seed(utils.RANDOM_SEED)
-    torch.manual_seed(utils.RANDOM_SEED)
+    random.seed(common.SEED)
+    torch.manual_seed(common.SEED)
     parser = argparse.ArgumentParser()
     parser.add_argument("--cuda", default=False, action="store_true", help="Enable cuda")
     parser.add_argument("-n", type=int, default=N_STEPS,
                         help="Steps to do on Bellman unroll")
     args = parser.parse_args()
 
-    game_parameters = utils.PARA_SHORTCUT
+    game_parameters = common.HYPERPARAMS["pong"]
     # create the environment and apply a set of standard wrappers
     # render_mode = "human" would show the game screen
     # env = gym.make(game_parameters.environment_name, render_mode = "human")
     env = gym.make(game_parameters.environment_name)
     env = ptan.common.wrappers.wrap_dqn(env)
-    env.seed(utils.RANDOM_SEED)
+    env.seed(common.SEED)
 
     # create the NN (double nets)
     device = torch.device("cuda" if args.cuda else "cpu")
     # print(env.action_space.n)
     # print(env.unwrapped.get_action_meanings())
-    net = models.DuelingDQNModel(env.observation_space.shape, env.action_space.n).to(device)
+    net = model_dueling.DuelingDQN(env.observation_space.shape, env.action_space.n).to(device)
 
-    target_net = baseAgent.TargetNet(net)
+    target_net = ptan.agent.TargetNet(net)
 
     # we create the agent, using an epsilon-greedy action selector as default.
     # During the training, epsilon will be decreased by the EpsilonReducer
     # This will decrease the amount of randomly selected actions and give more control to our NN
     # epsilon_reducer = EpsilonReducer()
-    agent = baseAgent.BaseAgentDqn(net, device=device, action_selector=ptan.actions.ArgmaxSelector())
+    agent = ptan.agent.DQNAgent(net, device=device, action_selector=ptan.actions.ArgmaxActionSelector())
 
     # The next two very important objects are ExperienceSource and ExperienceReplayBuffer.
     # The first one takes the agent and environment and provides transitions over game episodes.
@@ -117,7 +127,7 @@ if __name__ == "__main__":
                 eval_states = [np.array(transition.state, copy=False) for transition in eval_states]
                 eval_states = np.array(eval_states, copy=False)
                 engine.state.eval_states = eval_states
-            utils.evaluate_states(eval_states, net, device, engine)
+            evaluate_states(eval_states, net, device, engine)
         return {
             "loss": loss_value.item(),
             # "epsilon": epsilon_reducer.action_selector.epsilon,
