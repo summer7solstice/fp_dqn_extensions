@@ -17,7 +17,6 @@ from epsilonReducer import EpsilonReducer
 from datetime import timedelta, datetime
 from ignite.metrics import RunningAverage
 from ignite.contrib.handlers import tensorboard_logger as tb_logger
-import torch.optim.lr_scheduler as scheduler
 import warnings
 from utils import PARA_SHORTCUT
 METHOD_NAME = "combined_dqn"

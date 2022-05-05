@@ -25,24 +25,45 @@ def huber_loss_func(batch, target_net, net, gamma, device="cpu"):
     return criterion(state_action_values, bellman_values)
 
 
-def mse_loss_func(batch, target_net, net, gamma, device="cpu"):
-    states, actions, rewards, done, next_state = utils.get_batch(batch)
+# def mse_loss_func(batch, target_net, net, gamma, device="cpu"):
+#     states, actions, rewards, done, next_state = utils.get_batch(batch)
+#
+#     states_value = torch.tensor(states).to(device)
+#     actions_value = torch.tensor(actions).to(device)
+#     rewards_value = torch.tensor(rewards).to(device)
+#     done_mask = torch.BoolTensor(done).to(device)
+#     next_states_value = torch.tensor(next_state).to(device)
+#
+#     actions_value = actions_value.unsqueeze(-1)
+#     state_action_values = net(states_value).gather(1, actions_value)
+#     state_action_values = state_action_values.squeeze(-1)
+#     with torch.no_grad():
+#         next_state_values = target_net(next_states_value).max(1)[0]
+#         next_state_values[done_mask] = 0.0
+#
+#     bellman_values = next_state_values.detach() * gamma + rewards_value
+#     return nn.MSELoss()(state_action_values, bellman_values)
 
-    states_value = torch.tensor(states).to(device)
-    actions_value = torch.tensor(actions).to(device)
-    rewards_value = torch.tensor(rewards).to(device)
-    done_mask = torch.BoolTensor(done).to(device)
-    next_states_value = torch.tensor(next_state).to(device)
 
-    actions_value = actions_value.unsqueeze(-1)
-    state_action_values = net(states_value).gather(1, actions_value)
-    state_action_values = state_action_values.squeeze(-1)
+def mse_loss_func(batch, net, tgt_net, gamma, device="cpu"):
+    states, actions, rewards, dones, next_states = \
+        utils.get_batch(batch)
+
+    states_v = torch.tensor(states).to(device)
+    next_states_v = torch.tensor(next_states).to(device)
+    actions_v = torch.tensor(actions).to(device)
+    rewards_v = torch.tensor(rewards).to(device)
+    done_mask = torch.BoolTensor(dones).to(device)
+
+    actions_v = actions_v.unsqueeze(-1)
+    state_action_vals = net(states_v).gather(1, actions_v)
+    state_action_vals = state_action_vals.squeeze(-1)
     with torch.no_grad():
-        next_state_values = target_net(next_states_value).max(1)[0]
-        next_state_values[done_mask] = 0.0
+        next_state_vals = tgt_net(next_states_v).max(1)[0]
+        next_state_vals[done_mask] = 0.0
 
-    bellman_values = next_state_values.detach() * gamma + rewards_value
-    return nn.MSELoss()(state_action_values, bellman_values)
+    bellman_vals = next_state_vals.detach() * gamma + rewards_v
+    return nn.MSELoss()(state_action_vals, bellman_vals)
 
 # loss func for prioritised dqn
 # new loss function, which accepts weights and returns the additional items' priorities

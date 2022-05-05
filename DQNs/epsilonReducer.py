@@ -7,7 +7,9 @@ from types import SimpleNamespace
 # It should be decayed from 1.0 in the beginning (fully random agent) to some small number,
 # like 0.02 or 0.01. The code is trivial but needed in almost any DQN
 class EpsilonReducer:
-    def __init__(self, selector: ptan.actions.GreedySelector,
+    # def __init__(self, selector: ptan.actions.GreedySelector,
+                 # params: SimpleNamespace):
+    def __init__(self, selector: ptan.actions.EpsilonGreedyActionSelector,
                  params: SimpleNamespace):
         self.action_selector = selector
         self.parameters = params

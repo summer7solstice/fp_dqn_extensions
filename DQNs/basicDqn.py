@@ -16,7 +16,6 @@ from epsilonReducer import EpsilonReducer
 from datetime import timedelta, datetime
 from ignite.metrics import RunningAverage
 from ignite.contrib.handlers import tensorboard_logger as tb_logger
-import torch.optim.lr_scheduler as scheduler
 import warnings
 
 METHOD_NAME = "basic_dqn"
@@ -68,7 +67,7 @@ if __name__ == "__main__":
 
     # scheduler for learning rate decay(gamma is the decay rate), could be used in th future
     # see https://pytorch.org/docs/stable/optim.html
-    sched = scheduler.StepLR(opt, step_size=1, gamma=0.1)
+    # sched = scheduler.StepLR(opt, step_size=1, gamma=0.1)
 
     def process_batch(engine, batch):
         opt.zero_grad()
