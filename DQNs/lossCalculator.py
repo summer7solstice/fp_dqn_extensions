@@ -12,8 +12,8 @@ def huber_loss_func(batch, target_net, net, gamma, device="cpu"):
     done_mask = torch.BoolTensor(done).to(device)
     next_states_value = torch.tensor(next_state).to(device)
 
-    actions_v = actions_value.unsqueeze(-1)
-    state_action_values = net(states_value).gather(1, actions_v)
+    actions_value = actions_value.unsqueeze(-1)
+    state_action_values = net(states_value).gather(1, actions_value)
     state_action_values = state_action_values.squeeze(-1)
     with torch.no_grad():
         next_state_values = target_net(next_states_value).max(1)[0]
@@ -34,8 +34,8 @@ def mse_loss_func(batch, target_net, net, gamma, device="cpu"):
     done_mask = torch.BoolTensor(done).to(device)
     next_states_value = torch.tensor(next_state).to(device)
 
-    actions_v = actions_value.unsqueeze(-1)
-    state_action_values = net(states_value).gather(1, actions_v)
+    actions_value = actions_value.unsqueeze(-1)
+    state_action_values = net(states_value).gather(1, actions_value)
     state_action_values = state_action_values.squeeze(-1)
     with torch.no_grad():
         next_state_values = target_net(next_states_value).max(1)[0]

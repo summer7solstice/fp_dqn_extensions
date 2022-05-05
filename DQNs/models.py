@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import numpy as np
-
+from torch.autograd import Variable
 
 class BasicDQNModel(nn.Module):
     def __init__(self, input_shape, n_actions):
@@ -24,7 +24,7 @@ class BasicDQNModel(nn.Module):
         )
 
     def _get_conv_out(self, shape):
-        o = self.convolution(torch.zeros(1, *shape))
+        o = self.convolution(Variable(torch.zeros(1, *shape)))
         return int(np.prod(o.size()))
 
     def forward(self, x):
@@ -61,7 +61,7 @@ class DuelingDQNModel(nn.Module):
         )
 
     def _get_conv_out(self, shape):
-        o = self.convolution(torch.zeros(1, *shape))
+        o = self.convolution(Variable(torch.zeros(1, *shape)))
         return int(np.prod(o.size()))
 
     def adv_val(self, x):

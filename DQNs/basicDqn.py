@@ -51,8 +51,9 @@ if __name__ == "__main__":
     # we create the agent, using an epsilon-greedy action selector as default.
     # During the training, epsilon will be decreased by the EpsilonReducer
     # This will decrease the amount of randomly selected actions and give more control to our NN
-    epsilon_reducer = EpsilonReducer()
-    agent = baseAgent.BaseAgentDqn(net, device=device, action_selector=epsilon_reducer.action_selector)
+    action_selector = ptan.actions.GreedySelector(epsilon=game_parameters.epsilon_start)
+    epsilon_reducer = EpsilonReducer(selector=action_selector, params=game_parameters)
+    agent = baseAgent.BaseAgentDqn(net, device=device, action_selector=action_selector)
 
     # The next two very important objects are ExperienceSource and ExperienceReplayBuffer.
     # The first one takes the agent and environment and provides transitions over game episodes.
@@ -82,59 +83,59 @@ if __name__ == "__main__":
             target_net.sync()
         return {
             "loss": loss_value.item(),
-            "epsilon": epsilon_reducer.action_selector.epsilon,
+            "epsilon": action_selector.epsilon,
         }
 
     # finally, we create the Ignite Engine object
-    # engine = Engine(process_batch)
-    # utils.setup_ignite(engine, game_parameters, experience_source, METHOD_NAME, epsilon_reducer)
-    # engine.run(utils.create_batch(replay_buffer))
     engine = Engine(process_batch)
-    ptan_ignite.EndOfEpisodeHandler(experience_source, bound_avg_reward=game_parameters.goal_reward).attach(engine)
-    ptan_ignite.EpisodeFPSHandler().attach(engine)
-
-
-    @engine.on(ptan_ignite.EpisodeEvents.EPISODE_COMPLETED)
-    def episode_completed(trainer: Engine):
-        print("Episode %d: reward=%s, steps=%s, speed=%.3f frames/s, elapsed=%s, loss=%lf" % (
-            trainer.state.episode, trainer.state.episode_reward,
-            trainer.state.episode_steps, trainer.state.metrics.get('fps', 0),
-            timedelta(seconds=trainer.state.metrics.get('time_passed', 0)),
-            trainer.state.output["loss"]
-        ))
-        # if trainer.state.episode % 2 == 0:
-        #     sched.step()
-        #     print("LR decrease to", sched.get_last_lr()[0])
-        result_list.append((trainer.state.episode,trainer.state.episode_reward))
-
-
-
-    @engine.on(ptan_ignite.EpisodeEvents.BOUND_REWARD_REACHED)
-    def game_solved(trainer: Engine):
-        print("Game solved in %s, after %d episodes and %d iterations!" % (
-            timedelta(seconds=trainer.state.metrics['time_passed']),
-            trainer.state.episode, trainer.state.iteration))
-        trainer.should_terminate = True
-        print("--------Finished---------")
-        print(result_list)
-        for obj in result_list:
-            print(obj)
-
-
-    # track TensorBoard data
-    logdir = f"runs/{datetime.now().isoformat(timespec='minutes')}-{game_parameters.game_name}-{METHOD_NAME}={METHOD_NAME}"
-    tb = tb_logger.TensorboardLogger(log_dir=logdir)
-    RunningAverage(output_transform=lambda v: v['loss']).attach(engine, "avg_loss")
-
-    episode_handler = tb_logger.OutputHandler(tag="episodes", metric_names=['reward', 'steps', 'avg_reward'])
-    tb.attach(engine, log_handler=episode_handler, event_name=ptan_ignite.EpisodeEvents.EPISODE_COMPLETED)
-
-    # write to tensorboard every 100 iterations
-    ptan_ignite.PeriodicEvents().attach(engine)
-    handler = tb_logger.OutputHandler(tag="train", metric_names=['avg_loss', 'avg_fps'],
-                                      output_transform=lambda a: a)
-    tb.attach(engine, log_handler=handler, event_name=ptan_ignite.PeriodEvents.ITERS_100_COMPLETED)
-
+    utils.setup_ignite(engine, game_parameters, experience_source, METHOD_NAME, epsilon_reducer)
     engine.run(utils.create_batch(replay_buffer))
-
-
+    # engine = Engine(process_batch)
+    # ptan_ignite.EndOfEpisodeHandler(experience_source, bound_avg_reward=game_parameters.goal_reward).attach(engine)
+    # ptan_ignite.EpisodeFPSHandler().attach(engine)
+    #
+    #
+    # @engine.on(ptan_ignite.EpisodeEvents.EPISODE_COMPLETED)
+    # def episode_completed(trainer: Engine):
+    #     print("Episode %d: reward=%s, steps=%s, speed=%.3f frames/s, elapsed=%s, loss=%lf" % (
+    #         trainer.state.episode, trainer.state.episode_reward,
+    #         trainer.state.episode_steps, trainer.state.metrics.get('fps', 0),
+    #         timedelta(seconds=trainer.state.metrics.get('time_passed', 0)),
+    #         trainer.state.output["loss"]
+    #     ))
+    #     # if trainer.state.episode % 2 == 0:
+    #     #     sched.step()
+    #     #     print("LR decrease to", sched.get_last_lr()[0])
+    #     result_list.append((trainer.state.episode,trainer.state.episode_reward))
+    #
+    #
+    #
+    # @engine.on(ptan_ignite.EpisodeEvents.BOUND_REWARD_REACHED)
+    # def game_solved(trainer: Engine):
+    #     print("Game solved in %s, after %d episodes and %d iterations!" % (
+    #         timedelta(seconds=trainer.state.metrics['time_passed']),
+    #         trainer.state.episode, trainer.state.iteration))
+    #     trainer.should_terminate = True
+    #     print("--------Finished---------")
+    #     print(result_list)
+    #     for obj in result_list:
+    #         print(obj)
+    #
+    #
+    # # track TensorBoard data
+    # logdir = f"runs/{datetime.now().isoformat(timespec='minutes')}-{game_parameters.game_name}-{METHOD_NAME}={METHOD_NAME}"
+    # tb = tb_logger.TensorboardLogger(log_dir=logdir)
+    # RunningAverage(output_transform=lambda v: v['loss']).attach(engine, "avg_loss")
+    #
+    # episode_handler = tb_logger.OutputHandler(tag="episodes", metric_names=['reward', 'steps', 'avg_reward'])
+    # tb.attach(engine, log_handler=episode_handler, event_name=ptan_ignite.EpisodeEvents.EPISODE_COMPLETED)
+    #
+    # # write to tensorboard every 100 iterations
+    # ptan_ignite.PeriodicEvents().attach(engine)
+    # handler = tb_logger.OutputHandler(tag="train", metric_names=['avg_loss', 'avg_fps'],
+    #                                   output_transform=lambda a: a)
+    # tb.attach(engine, log_handler=handler, event_name=ptan_ignite.PeriodEvents.ITERS_100_COMPLETED)
+    #
+    # engine.run(utils.create_batch(replay_buffer))
+    #
+    #
