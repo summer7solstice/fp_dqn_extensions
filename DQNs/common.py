@@ -76,11 +76,13 @@ def setup_ignite(engine: Engine, params: SimpleNamespace,
     def episode_completed(trainer: Engine):
         passed = trainer.state.metrics.get('time_passed', 0)
         print("Episode %d: reward=%.0f, steps=%s, "
-              "speed=%.1f f/s, elapsed=%s" % (
+              "speed=%.1f f/s, elapsed=%s, loss=%lf" % (
             trainer.state.episode, trainer.state.episode_reward,
             trainer.state.episode_steps,
             trainer.state.metrics.get('avg_fps', 0),
-            timedelta(seconds=int(passed))))
+            timedelta(seconds=int(passed)),
+            trainer.state.output["loss"]
+        ))
 
     @engine.on(ptan_ignite.EpisodeEvents.BOUND_REWARD_REACHED)
     def game_solved(trainer: Engine):

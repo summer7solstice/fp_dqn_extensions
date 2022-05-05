@@ -13,7 +13,7 @@ import model_dqn
 # from ptan import baseAgent
 import ptan.ignite as ptan_ignite
 import lossCalculator
-from utils import PARA_SHORTCUT
+# from utils import PARA_SHORTCUT
 from epsilonReducer import EpsilonReducer
 from datetime import timedelta, datetime
 from ignite.metrics import RunningAverage
@@ -84,13 +84,14 @@ if __name__ == "__main__":
         beta = min(1.0, value)
         betaClass.beta = beta
 
+
     def create_batch_with_beta(buffer: ptan.experience.PrioReplayBufferNaive):
         step_size = 1
-        buffer.populate(PARA_SHORTCUT.replay_start)
+        buffer.populate(game_parameters.replay_initial)
         while 1:
             buffer.populate(step_size)
             # print(betaClass.beta)
-            yield buffer.sample(PARA_SHORTCUT.batch_size, beta=betaClass.beta)
+            yield buffer.sample(game_parameters.batch_size, beta=betaClass.beta)
 
     def process_batch(engine, batch):
         batch, batch_indices, batch_weights = batch
@@ -112,55 +113,56 @@ if __name__ == "__main__":
         }
 
     # finally, we create the Ignite Engine object
-    # engine = Engine(process_batch)
-    # utils.setup_ignite(engine, game_parameters, experience_source, METHOD_NAME, epsilon_reducer)
-    # engine.run(utils.create_batch(replay_buffer))
     engine = Engine(process_batch)
-    ptan_ignite.EndOfEpisodeHandler(experience_source, bound_avg_reward=game_parameters.stop_reward).attach(engine)
-    ptan_ignite.EpisodeFPSHandler().attach(engine)
+    common.setup_ignite(engine, game_parameters, experience_source, METHOD_NAME)
+    engine.run(common.batch_generator(replay_buffer, game_parameters.replay_initial,
+                                      game_parameters.batch_size))
+    # engine = Engine(process_batch)
+    # ptan_ignite.EndOfEpisodeHandler(experience_source, bound_avg_reward=game_parameters.stop_reward).attach(engine)
+    # ptan_ignite.EpisodeFPSHandler().attach(engine)
 
 
-    @engine.on(ptan_ignite.EpisodeEvents.EPISODE_COMPLETED)
-    def episode_completed(trainer: Engine):
-        print("Episode %d: reward=%s, steps=%s, speed=%.3f frames/s, elapsed=%s, loss=%lf" % (
-            trainer.state.episode, trainer.state.episode_reward,
-            trainer.state.episode_steps, trainer.state.metrics.get('fps', 0),
-            timedelta(seconds=trainer.state.metrics.get('time_passed', 0)),
-            trainer.state.output["loss"]
-        ))
-        # if trainer.state.episode % 2 == 0:
-        #     sched.step()
-        #     print("LR decrease to", sched.get_last_lr()[0])
-        result_list.append((trainer.state.episode,trainer.state.episode_reward))
-
-
-
-    @engine.on(ptan_ignite.EpisodeEvents.BOUND_REWARD_REACHED)
-    def game_solved(trainer: Engine):
-        print("Game solved in %s, after %d episodes and %d iterations!" % (
-            timedelta(seconds=trainer.state.metrics['time_passed']),
-            trainer.state.episode, trainer.state.iteration))
-        trainer.should_terminate = True
-        print("--------Finished---------")
-        print(result_list)
-        for obj in result_list:
-            print(obj)
-
-
-    # track TensorBoard data
-    logdir = f"runs/{datetime.now().isoformat(timespec='minutes')}-{game_parameters.run_name}-{METHOD_NAME}={METHOD_NAME}"
-    tb = tb_logger.TensorboardLogger(log_dir=logdir)
-    RunningAverage(output_transform=lambda v: v['loss']).attach(engine, "avg_loss")
-
-    episode_handler = tb_logger.OutputHandler(tag="episodes", metric_names=['reward', 'steps', 'avg_reward'])
-    tb.attach(engine, log_handler=episode_handler, event_name=ptan_ignite.EpisodeEvents.EPISODE_COMPLETED)
-
-    # write to tensorboard every 100 iterations
-    ptan_ignite.PeriodicEvents().attach(engine)
-    handler = tb_logger.OutputHandler(tag="train", metric_names=['avg_loss', 'avg_fps'],
-                                      output_transform=lambda a: a)
-    tb.attach(engine, log_handler=handler, event_name=ptan_ignite.PeriodEvents.ITERS_100_COMPLETED)
-
-    engine.run(create_batch_with_beta(replay_buffer))
+    # @engine.on(ptan_ignite.EpisodeEvents.EPISODE_COMPLETED)
+    # def episode_completed(trainer: Engine):
+    #     print("Episode %d: reward=%s, steps=%s, speed=%.3f frames/s, elapsed=%s, loss=%lf" % (
+    #         trainer.state.episode, trainer.state.episode_reward,
+    #         trainer.state.episode_steps, trainer.state.metrics.get('fps', 0),
+    #         timedelta(seconds=trainer.state.metrics.get('time_passed', 0)),
+    #         trainer.state.output["loss"]
+    #     ))
+    #     # if trainer.state.episode % 2 == 0:
+    #     #     sched.step()
+    #     #     print("LR decrease to", sched.get_last_lr()[0])
+    #     result_list.append((trainer.state.episode,trainer.state.episode_reward))
+    #
+    #
+    #
+    # @engine.on(ptan_ignite.EpisodeEvents.BOUND_REWARD_REACHED)
+    # def game_solved(trainer: Engine):
+    #     print("Game solved in %s, after %d episodes and %d iterations!" % (
+    #         timedelta(seconds=trainer.state.metrics['time_passed']),
+    #         trainer.state.episode, trainer.state.iteration))
+    #     trainer.should_terminate = True
+    #     print("--------Finished---------")
+    #     print(result_list)
+    #     for obj in result_list:
+    #         print(obj)
+    #
+    #
+    # # track TensorBoard data
+    # logdir = f"runs/{datetime.now().isoformat(timespec='minutes')}-{game_parameters.run_name}-{METHOD_NAME}={METHOD_NAME}"
+    # tb = tb_logger.TensorboardLogger(log_dir=logdir)
+    # RunningAverage(output_transform=lambda v: v['loss']).attach(engine, "avg_loss")
+    #
+    # episode_handler = tb_logger.OutputHandler(tag="episodes", metric_names=['reward', 'steps', 'avg_reward'])
+    # tb.attach(engine, log_handler=episode_handler, event_name=ptan_ignite.EpisodeEvents.EPISODE_COMPLETED)
+    #
+    # # write to tensorboard every 100 iterations
+    # ptan_ignite.PeriodicEvents().attach(engine)
+    # handler = tb_logger.OutputHandler(tag="train", metric_names=['avg_loss', 'avg_fps'],
+    #                                   output_transform=lambda a: a)
+    # tb.attach(engine, log_handler=handler, event_name=ptan_ignite.PeriodEvents.ITERS_100_COMPLETED)
+    #
+    # engine.run(create_batch_with_beta(replay_buffer))
 
 
