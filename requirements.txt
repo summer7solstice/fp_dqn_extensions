@@ -1,0 +1,11 @@
+ale_py==0.7.5
+gym==0.23.1
+importlib_metadata==4.11.3
+importlib_resources==5.7.1
+numpy==1.22.3
+opencv_python==4.5.5.64
+torch==1.11.0
+pytorch-ignite==0.4.9
+tensorboard-logger==0.1.0
+tensorboardX==2.5
+ptan==0.7

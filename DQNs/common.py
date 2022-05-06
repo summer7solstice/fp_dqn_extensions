@@ -7,7 +7,7 @@ from types import SimpleNamespace
 from typing import Iterable, Tuple, List
 
 import ptan
-import ptan.ignite as ptan_ignite
+import modifiedIgnite as ptan_ignite
 from ignite.engine import Engine
 from ignite.metrics import RunningAverage
 from ignite.contrib.handlers import tensorboard_logger as tb_logger

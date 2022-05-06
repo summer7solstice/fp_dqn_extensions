@@ -5,7 +5,7 @@ from types import SimpleNamespace
 import ptan
 import epsilonReducer
 from ignite.engine import Engine
-import ptan.ignite as ptan_ignite
+import modifiedIgnite as ptan_ignite
 import warnings
 from datetime import timedelta, datetime
 from ignite.metrics import RunningAverage

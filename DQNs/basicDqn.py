@@ -13,7 +13,6 @@ import model_dqn
 # import models
 # from ptan import baseAgent
 # from ptan import agent
-import ptan.ignite as ptan_ignite
 import lossCalculator
 from epsilonReducer import EpsilonReducer
 from datetime import timedelta, datetime

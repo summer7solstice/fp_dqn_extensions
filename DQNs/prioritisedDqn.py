@@ -11,7 +11,6 @@ from ignite.engine import Engine
 import common
 import model_dqn
 # from ptan import baseAgent
-import ptan.ignite as ptan_ignite
 import lossCalculator
 # from utils import PARA_SHORTCUT
 from epsilonReducer import EpsilonReducer

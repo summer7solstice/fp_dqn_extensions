@@ -8,7 +8,6 @@ from ignite.engine import Engine
 import numpy as np
 import common
 import model_dueling
-import ptan.ignite as ptan_ignite
 import lossCalculator
 from epsilonReducer import EpsilonReducer
 from datetime import timedelta, datetime

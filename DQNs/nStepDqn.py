@@ -12,7 +12,6 @@ import common
 import model_dqn
 import lossCalculator
 from epsilonReducer import EpsilonReducer
-import ptan.ignite as ptan_ignite
 from datetime import timedelta, datetime
 from ignite.metrics import RunningAverage
 from ignite.contrib.handlers import tensorboard_logger as tb_logger
